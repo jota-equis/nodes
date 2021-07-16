@@ -10,7 +10,7 @@ DOMAIN=
 ROLE=
 TOKEN=
 EXTRAPORTS=
-REPO="https://raw.githubusercontent.com/denizen-x/container-hub/main";
+REPO="https://raw.githubusercontent.com/jota-equis/nodes/main";
 # · ---
 echo -e "| CLOUD-FINISH ... :: start :: ..."
 # · ---
