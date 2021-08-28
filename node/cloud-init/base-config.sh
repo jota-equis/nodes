@@ -47,6 +47,7 @@ fi
 
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
+sed -i 's/^#ReadEtcHosts/ReadEtcHosts/g' /etc/systemd/resolved.conf;
 sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
 
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
