@@ -1,2 +1,12 @@
-DPkg::Pre-Invoke{"mount -o remount,exec /tmp";};
-DPkg::Post-Invoke {"mount -o remount,noexec /tmp";};
+Dpkg::Options {
+  "--force-confdef";
+  "--force-confold";
+};
+
+DPkg::Pre-Invoke {
+  "mount -o remount,exec /tmp";
+};
+
+DPkg::Post-Invoke {
+  "mount -o remount,noexec /tmp";
+};
