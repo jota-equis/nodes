@@ -35,6 +35,8 @@ for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN; do [[ -z "$
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
+/srv/local/bin/local-ifaces.sh;
+
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "/^Port 22/a Port ${SSH_PORT}" /etc/ssh/sshd_config;
     sed -i "/Port 22/Port ${SSH_PORT}" /etc/ssh/ssh_config;
@@ -63,6 +65,9 @@ done
 
 echo rbd >> /etc/modules;
 echo iscsi_tcp >> /etc/modules;
+
+echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim;
+chmod 0751 /etc/cron.d/fstrim;
 # · ---
 DEBIAN_FRONTEND=noninteractive apt -y full-upgrade && apt -y autoclean && apt -y autoremove && sync;
 fstrim --all;
