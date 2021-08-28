@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+/srv/local/bin/local-ifaces.sh;
+
 for i in $(cat /srv/local/etc/.env/IFACE_LOCAL); do
   . /srv/local/etc/.env/${i}.iface;
 
