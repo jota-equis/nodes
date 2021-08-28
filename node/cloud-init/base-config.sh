@@ -27,9 +27,13 @@ curl -o /etc/fail2ban/jail.d/portscan.conf ${REPO}/node/config/etc/fail2ban/jail
 curl -o /etc/ssh/sshd_config ${REPO}/node/config/etc/ssh/sshd_config && chmod 0600 /etc/ssh/sshd_config;
 curl -o /etc/sysctl.d/999-local.conf ${REPO}/node/config/etc/sysctl.d/999-local.conf;
 curl -o /etc/systemd/timesyncd.conf ${REPO}/node/config/etc/systemd/timesyncd.conf;
+curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
+curl -o /srv/local/etc/99-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
 
 for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+
 chmod 0600 /srv/local/etc/.env/*;
+chmod 0750 /srv/local/bin/*;
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "/^Port 22/a Port ${SSH_PORT}" /etc/ssh/sshd_config;
@@ -39,6 +43,7 @@ fi
 [[ ! -z "${DOMAIN}" ]] && sed -i "s/^#kernel.domainname/kernel.domainname           = ${DOMAIN}/g" /etc/sysctl.d/999-local.conf;
 
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
+sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
 sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
 
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
@@ -48,8 +53,18 @@ rm -Rf /tmp/* /tmp/.*;
 systemctl enable tmp.mount && systemctl start tmp.mount;
 systemctl restart systemd-timesyncd.service;
 systemctl enable fail2ban;
+
+for d in $(lsblk -dnoNAME | grep sd); do
+  echo -e "\nblock/${d}/queue/iosched/front_merges = 0" > /etc/sysfs.d/${d}.conf;
+  echo "block/${d}/queue/iosched/read_expire = 150" >> /etc/sysfs.d/${d}.conf;
+  echo "block/${d}/queue/iosched/write_expire = 1500" >> /etc/sysfs.d/${d}.conf;
+done
+
+echo rbd >> /etc/modules;
+echo iscsi_tcp >> /etc/modules;
 # · ---
 DEBIAN_FRONTEND=noninteractive apt -y full-upgrade && apt -y autoclean && apt -y autoremove && sync;
+fstrim --all;
 # · ---
 echo -e "| CLOUD-FINISH ... :: end :: ..."
 # · ---
