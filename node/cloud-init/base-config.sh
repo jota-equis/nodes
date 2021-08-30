@@ -9,6 +9,7 @@ MASTER=
 DOMAIN=
 ROLE=
 TOKEN=
+NETWORKID=
 EXTRAPORTS=
 REPO="https://raw.githubusercontent.com/jota-equis/nodes/main";
 # · ---
@@ -31,7 +32,7 @@ curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
 curl -o /srv/local/bin/local-netplan.sh ${REPO}/node/config/bin/local-netplan.sh;
 curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
@@ -39,13 +40,14 @@ chmod 0750 /srv/local/bin/*;
 /srv/local/bin/local-ifaces.sh;
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
-    sed -i "s/^Port 22/a Port ${SSH_PORT}/" /etc/ssh/sshd_config;
+    sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
     sed -i "s/^port = 22$/&,${SSH_PORT}/" /etc/fail2ban/jail.d/sshd.conf;
 fi
 
 [[ ! -z "${DOMAIN}" ]] && sed -i "s/^#kernel.domainname/kernel.domainname           = ${DOMAIN}/g" /etc/sysctl.d/999-local.conf;
 
+echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
 sed -i 's/^#ReadEtcHosts/ReadEtcHosts/g' /etc/systemd/resolved.conf;
