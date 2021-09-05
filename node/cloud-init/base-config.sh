@@ -41,6 +41,7 @@ chmod 0750 /srv/local/bin/*;
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
+    sed -i '/^Port ${SSH_PORT}/a Port 22' /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
     sed -i "s/^port = 22$/&,${SSH_PORT}/" /etc/fail2ban/jail.d/sshd.conf;
 fi
