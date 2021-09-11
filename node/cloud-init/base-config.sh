@@ -107,6 +107,8 @@ done
 echo rbd >> /etc/modules;
 echo iscsi_tcp >> /etc/modules;
 
+echo "$(echo 2 | select-editor | grep nano | awk '{ print ($0+0) }')" | select-editor;
+
 echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim;
 chmod 0751 /etc/cron.d/fstrim;
 # · ---
