@@ -35,10 +35,12 @@ curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
 curl -o /srv/local/bin/local-netplan.sh ${REPO}/node/config/bin/local-netplan.sh;
 curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
 
-[[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE"
-[[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN"
-[[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22
-[[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR"
+. /etc/environment;
+
+[[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE";
+[[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN";
+[[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22;
+[[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR";
 
 for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
@@ -58,6 +60,8 @@ if [[ "x${SSH_PORT}" != "x22" ]]; then
         sed -i "/^Port ${SSH_PORT}/a Port 22" /etc/ssh/sshd_config;
         ufw limit 22/tcp comment "SSH access";
     fi
+else
+    ufw limit 22/tcp comment "SSH access";
 fi
 
 if [[ "x${RKE_IP}" != "x" ]]; then
@@ -71,10 +75,7 @@ fi
 
 [[ -f /etc/hosts.localnet ]] && sed -i '/^127.0.0.1 localhost$/r'<(cat /etc/hosts.localnet) /etc/hosts;
 
-if [[ ! -z "${LOCAL_CIDR}" ]]; then
-    ufw allow from "$LOCAL_CIDR" comment "Private subnet";
-fi
-
+[[ ! -z "${LOCAL_CIDR}" ]] && ufw allow from "$LOCAL_CIDR" comment "Private subnet";
 
 if [[ ! -z $THIS_IPV6 && "x$THIS_IPV6" = "x1"  ]]; then
     sed -i 's/^net.ipv6/# net.ipv6/g' /etc/sysctl.d/999-local.conf;
