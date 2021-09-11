@@ -11,6 +11,8 @@ ROLE=
 TOKEN=
 NETWORKID=
 EXTRAPORTS=
+LOCAL_CIDR=
+THIS_IPV6=
 RKE_IP=
 REPO="https://raw.githubusercontent.com/jota-equis/nodes/main";
 # · ---
@@ -33,7 +35,12 @@ curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
 curl -o /srv/local/bin/local-netplan.sh ${REPO}/node/config/bin/local-netplan.sh;
 curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID RKE_IP; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+[[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE"
+[[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN"
+[[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22
+[[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR"
+
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
@@ -42,17 +49,40 @@ chmod 0750 /srv/local/bin/*;
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
-    sed -i "/^Port ${SSH_PORT}/a Port 22" /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
     sed -i "s/^port = 22$/&,${SSH_PORT}/" /etc/fail2ban/jail.d/sshd.conf;
-fi
 
+    ufw limit $SSH_PORT/tcp comment "SSH admin access";
+    
+    if [[ ! -z $THIS_SSH_PORT_KEEP && "x$THIS_SSH_PORT_KEEP" = "x1" ]]; then
+        sed -i "/^Port ${SSH_PORT}/a Port 22" /etc/ssh/sshd_config;
+        ufw limit 22/tcp comment "SSH access";
+    fi
+fi
 
 if [[ "x${RKE_IP}" != "x" ]]; then
     sed -i "s|^Match Address 127\.0.*|&,${RKE_IP}|" /etc/ssh/sshd_config;
 fi
 
-[[ ! -z "${DOMAIN}" ]] && sed -i "s/^#kernel.domainname/kernel.domainname           = ${DOMAIN}/g" /etc/sysctl.d/999-local.conf;
+if [[ ! -z "${DOMAIN}" ]]; then
+    sed -i "s/^#kernel.domainname/kernel.domainname           = ${DOMAIN}/g" /etc/sysctl.d/999-local.conf;
+    sed -i "s/^127.0.1.1 $HOSTNAME $HOSTNAME$/127.0.1.1 $HOSTNAME.$DOMAIN $HOSTNAME/" /etc/hosts;
+fi
+
+[[ -f /etc/hosts.localnet ]] && sed -i '/^127.0.0.1 localhost$/r'<(cat /etc/hosts.localnet) /etc/hosts;
+
+if [[ ! -z "${LOCAL_CIDR}" ]]; then
+    ufw allow from "$LOCAL_CIDR" comment "Private subnet";
+fi
+
+
+if [[ ! -z $THIS_IPV6 && "x$THIS_IPV6" = "x1"  ]]; then
+    sed -i 's/^net.ipv6/# net.ipv6/g' /etc/sysctl.d/999-local.conf;
+else
+    for i in $(ufw status numbered  | grep "(v6)" | awk '{ print $1 }' | sed 's/\[//' | sed 's/\]//' | sort -r); do
+        yes | ufw delete ${i};
+    done
+fi
 
 echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
