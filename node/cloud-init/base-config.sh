@@ -35,19 +35,25 @@ curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
 curl -o /srv/local/bin/local-netplan.sh ${REPO}/node/config/bin/local-netplan.sh;
 curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
 
-. /etc/environment;
+[[ -f /etc/environment ]] && . /etc/environment;
 
 [[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE";
 [[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN";
 [[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22;
 [[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR";
+[[ ! -z $THIS_TOKEN ]] && TOKEN="$THIS_TOKEN";
+[[ ! -z $THIS_NETWORKID ]] && NETWORKID="$THIS_NETWORKID";
+[[ ! -z $THIS_RANCHERIP ]] && RKE_IP="$THIS_RANCHERIP";
+[[ ! -z $THIS_FIXED_IPLAN ]] && THIS_FIXED_IPLAN="$THIS_FIXED_IPLAN";
+
+echo "" > /etc/environment;
 
 for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
-/srv/local/bin/local-ifaces.sh;
+[[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]] && /srv/local/bin/local-ifaces.sh;
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
@@ -64,8 +70,18 @@ else
     ufw limit 22/tcp comment "SSH access";
 fi
 
-if [[ "x${RKE_IP}" != "x" ]]; then
-    sed -i "s|^Match Address 127\.0.*|&,${RKE_IP}|" /etc/ssh/sshd_config;
+if [[ "x${ROLE}" = "xrancher" ]]; then
+    ufw allow 80/tcp comment "Rancher http";
+    ufw allow 443/tcp comment "Rancher https";
+else
+    if [[ "x${RKE_IP}" != "x" ]]; then
+        sed -i "s|^Match Address 127\.0.*|&,${RKE_IP}|" /etc/ssh/sshd_config;
+        ufw allow from ${RKE_IP} comment "Rancher";
+    fi
+
+    if [[ "x${ROLE}" != "xmaster" ]]; then
+        echo iscsi_tcp >> /etc/modules;
+    fi
 fi
 
 if [[ ! -z "${DOMAIN}" ]]; then
@@ -106,7 +122,6 @@ for d in $(lsblk -dnoNAME | grep sd); do
 done
 
 echo rbd >> /etc/modules;
-echo iscsi_tcp >> /etc/modules;
 
 echo "$(echo 2 | select-editor | grep nano | awk '{ print ($0+0) }')" | select-editor;
 
