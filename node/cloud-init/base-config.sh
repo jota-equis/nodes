@@ -96,7 +96,7 @@ fi
 if [[ ! -z $THIS_IPV6 && "x$THIS_IPV6" = "x1"  ]]; then
     sed -i 's/^net.ipv6/# net.ipv6/g' /etc/sysctl.d/999-local.conf;
 else
-    for i in $(ufw status numbered  | grep "(v6)" | awk '{ print $1 }' | sed 's/\[//' | sed 's/\]//' | sort -r); do
+    for i in $(ufw status numbered  | awk '/(v6)/ { gsub("^[[]+",""); gsub("[]]",""); print $1 }' | sort -r); do
         yes | ufw delete ${i};
     done
 fi
