@@ -47,10 +47,11 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 [[ ! -z $THIS_NETWORKID ]] && NETWORKID="$THIS_NETWORKID";
 [[ ! -z $THIS_RANCHERIP ]] && RKE_IP="$THIS_RANCHERIP";
 [[ ! -z $THIS_FIXED_IPLAN ]] && THIS_FIXED_IPLAN="$THIS_FIXED_IPLAN";
+[[ ! -z $THIS_LABELS ]] && LABELS="$THIS_LABELS";
 
 echo "" > /etc/environment;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
