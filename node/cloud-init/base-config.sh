@@ -40,6 +40,8 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 [[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE";
 [[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN";
 [[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22;
+[[ ! -z $THIS_HTTP_PORT ]] && HTTP_PORT="$THIS_HTTP_PORT" || HTTP_PORT=80;
+[[ ! -z $THIS_HTTPS_PORT ]] && HTTPS_PORT="$THIS_HTTPS_PORT" || HTTPS_PORT=443;
 [[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR";
 [[ ! -z $THIS_TOKEN ]] && TOKEN="$THIS_TOKEN";
 [[ ! -z $THIS_NETWORKID ]] && NETWORKID="$THIS_NETWORKID";
@@ -48,7 +50,7 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 echo "" > /etc/environment;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LOCAL_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
@@ -71,8 +73,8 @@ else
 fi
 
 if [[ "x${ROLE}" = "xrancher" ]]; then
-    ufw allow 80/tcp comment "Rancher http";
-    ufw allow 443/tcp comment "Rancher https";
+    ufw allow ${HTTP_PORT}/tcp comment "Rancher http";
+    ufw allow ${HTTPS_PORT}/tcp comment "Rancher https";
 else
     if [[ "x${RKE_IP}" != "x" ]]; then
         sed -i "s|^Match Address 127\.0.*|&,${RKE_IP}|" /etc/ssh/sshd_config;
@@ -80,6 +82,8 @@ else
     fi
 
     if [[ "x${ROLE}" != "xmaster" ]]; then
+        ufw allow ${HTTP_PORT}/tcp comment "Worker http";
+        ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
         echo iscsi_tcp >> /etc/modules;
     fi
 fi
