@@ -106,10 +106,16 @@ else
     done
 fi
 
+mkdir -pm0755 /etc/systemd/resolved.conf.d;
+cat << 'EOF' > /etc/systemd/resolved.conf.d/999-local.conf
+[Resolve]
+DNS=1.1.1.1 8.8.8.8 2606:4700:4700::1111
+ReadEtcHosts=yes
+EOF
+
 echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
-sed -i 's/^#ReadEtcHosts/ReadEtcHosts/g' /etc/systemd/resolved.conf;
 sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
 
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
@@ -125,13 +131,6 @@ for d in $(lsblk -dnoNAME | grep sd); do
   echo "block/${d}/queue/iosched/read_expire = 150" >> /etc/sysfs.d/${d}.conf;
   echo "block/${d}/queue/iosched/write_expire = 1500" >> /etc/sysfs.d/${d}.conf;
 done
-
-mkdir -pm0755 /etc/systemd/resolved.conf.d;
-cat << 'EOF' > /etc/systemd/resolved.conf.d/999-local.conf
-[Resolve]
-DNS=1.1.1.1 8.8.8.8 2606:4700:4700::1111 2001:4860:4860::8888
-ReadEtcHosts=yes
-EOF
 
 echo rbd >> /etc/modules;
 
