@@ -106,13 +106,6 @@ else
     done
 fi
 
-cat << 'EOF' > /etc/systemd/resolved.conf
-[Resolve]
-DNS=1.1.1.1 8.8.8.8 2606:4700:4700::1111
-DNSStubListener=No
-ReadEtcHosts=yes
-EOF
-
 echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
@@ -120,8 +113,22 @@ sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/
 
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
 
-rm -Rf /tmp/* /tmp/.*;
+rm -Rf /tmp/* /tmp/.* /etc/resolv.conf;
 
+cat << 'EOF' > /etc/systemd/resolved.conf
+[Resolve]
+DNS=1.1.1.1 8.8.8.8 2606:4700:4700::1111
+DNSStubListener=No
+ReadEtcHosts=yes
+EOF
+
+cat << 'EOF' > /etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+nameserver 2606:4700:4700::1111
+EOF
+
+systemctl disable systemd-resolved && systemctl stop systemd-resolved;
 systemctl enable tmp.mount && systemctl start tmp.mount;
 systemctl restart systemd-timesyncd.service;
 systemctl enable fail2ban;
