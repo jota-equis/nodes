@@ -126,6 +126,13 @@ for d in $(lsblk -dnoNAME | grep sd); do
   echo "block/${d}/queue/iosched/write_expire = 1500" >> /etc/sysfs.d/${d}.conf;
 done
 
+mkdir -pm0755 /etc/systemd/resolved.conf.d;
+cat << 'EOF' > /etc/systemd/resolved.conf.d/999-local.conf
+[Resolve]
+DNS=1.1.1.1 8.8.8.8 2606:4700:4700::1111 2001:4860:4860::8888
+ReadEtcHosts=yes
+EOF
+
 echo rbd >> /etc/modules;
 
 echo "$(echo 2 | select-editor | grep nano | awk '{ print ($0+0) }')" | select-editor;
