@@ -58,6 +58,8 @@ chmod 0750 /srv/local/bin/*;
 
 [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]] && /srv/local/bin/local-ifaces.sh;
 
+for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.${i}.forwarding = 1" >> /etc/sysctl.d/999-local.conf; done
+
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
