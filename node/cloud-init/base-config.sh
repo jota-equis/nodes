@@ -39,10 +39,13 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 [[ ! -z $THIS_ROLE ]] && ROLE="$THIS_ROLE";
 [[ ! -z $THIS_DOMAIN ]] && DOMAIN="$THIS_DOMAIN";
+[[ ! -z $THIS_LOCAL_DOMAIN ]] && LOCAL_DOMAIN="$THIS_LOCAL_DOMAIN";
 [[ ! -z $THIS_SSH_PORT ]] && SSH_PORT="$THIS_SSH_PORT" || SSH_PORT=22;
 [[ ! -z $THIS_HTTP_PORT ]] && HTTP_PORT="$THIS_HTTP_PORT" || HTTP_PORT=80;
 [[ ! -z $THIS_HTTPS_PORT ]] && HTTPS_PORT="$THIS_HTTPS_PORT" || HTTPS_PORT=443;
 [[ ! -z $THIS_LOCAL_CIDR ]] && LOCAL_CIDR="$THIS_LOCAL_CIDR";
+[[ ! -z $THIS_PODS_CIDR ]] && PODS_CIDR="$THIS_PODS_CIDR" || PODS_CIDR="10.42.0.0/16";
+[[ ! -z $THIS_SVC_CIDR ]] && SVC_CIDR="$THIS_SVC_CIDR" || SVC_CIDR="10.43.0.0/16";
 [[ ! -z $THIS_TOKEN ]] && TOKEN="$THIS_TOKEN";
 [[ ! -z $THIS_NETWORKID ]] && NETWORKID="$THIS_NETWORKID";
 [[ ! -z $THIS_RANCHERIP ]] && RKE_IP="$THIS_RANCHERIP";
@@ -51,7 +54,7 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 echo "" > /etc/environment;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR PODS_CIDR SVC_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
@@ -75,6 +78,12 @@ else
     ufw limit 22/tcp comment "SSH access";
 fi
 
+if [[ ! -z "${LOCAL_CIDR}" ]]; then
+    ufw allow from "$LOCAL_CIDR" comment "Private subnet";
+    ufw allow from "$PODS_CIDR" comment "K8s Pods CIDR";
+    ufw allow from "$SVC_CIDR" comment "K8s Services CIDR";
+fi
+
 if [[ "x${ROLE}" = "xrancher" ]]; then
     ufw allow ${HTTP_PORT}/tcp comment "Rancher http";
     ufw allow ${HTTPS_PORT}/tcp comment "Rancher https";
@@ -93,12 +102,13 @@ fi
 
 if [[ ! -z "${DOMAIN}" ]]; then
     sed -i "s/^#kernel.domainname/kernel.domainname           = ${DOMAIN}/g" /etc/sysctl.d/999-local.conf;
-    sed -i "s/^127.0.1.1 $HOSTNAME $HOSTNAME$/127.0.1.1 $HOSTNAME.$DOMAIN $HOSTNAME/" /etc/hosts;
+fi
+
+if [[ ! -z "${LOCAL_DOMAIN}" ]]; then
+    sed -i "s/^127.0.1.1 $HOSTNAME $HOSTNAME$/127.0.1.1 $HOSTNAME.$LOCAL_DOMAIN $HOSTNAME/" /etc/hosts;
 fi
 
 [[ -f /etc/hosts.localnet ]] && sed -i '/^127.0.0.1 localhost$/r'<(cat /etc/hosts.localnet) /etc/hosts;
-
-[[ ! -z "${LOCAL_CIDR}" ]] && ufw allow from "$LOCAL_CIDR" comment "Private subnet";
 
 if [[ ! -z $THIS_IPV6 && "x$THIS_IPV6" = "x1"  ]]; then
     sed -i 's/^net.ipv6/# net.ipv6/g' /etc/sysctl.d/999-local.conf;
