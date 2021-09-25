@@ -12,5 +12,5 @@ network:
           from: IFADDR
           scope: link
         - to: IFNETWORK
-          via: IFROUTE
           from: IFADDR
+          via: IFROUTE
