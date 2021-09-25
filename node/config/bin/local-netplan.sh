@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
 
-/srv/local/bin/local-ifaces.sh;
+/usr/local/bin/local-ifaces.sh;
 
 for i in $(cat /srv/local/etc/.env/IFACE_LOCAL); do
   . /srv/local/etc/.env/${i}.iface;
 
+  [[ -z $DEV || -z $NETVIA || -z $NETWORK || -z $NETMASK || -z $ADDR ]] && exit 1;
+
   cp /srv/local/etc/netplan-local.yaml /etc/netplan/99-local-${DEV}.yaml;
 
-  if [[ "${NETMASK}" = "8" ]]; then
-    PREFIX=$(echo $ADDR |  awk -F  "." '{ print $1".0.0." }');
-  elif [[ "${NETMASK}" = "16" ]]; then
-    PREFIX=$(echo $ADDR |  awk -F  "." '{ print $1"."$2".0." }');
-  else
-    PREFIX=$(echo $ADDR |  awk -F  "." '{ print $1"."$2"."$3"." }');
-  fi
-
   sed -i "s|IFNAME|${DEV}|g" /etc/netplan/99-local-${DEV}.yaml;
-  sed -i "s|IFROUTE|${PREFIX}1|g" /etc/netplan/99-local-${DEV}.yaml;
-  sed -i "s|IFNETWORK|${PREFIX}0/${NETMASK}|g" /etc/netplan/99-local-${DEV}.yaml;
+  sed -i "s|IFROUTE|${NETVIA}|g" /etc/netplan/99-local-${DEV}.yaml;
+  sed -i "s|IFNETWORK|${NETWORK}/${NETMASK}|g" /etc/netplan/99-local-${DEV}.yaml;
   sed -i "s|IFADDR|${ADDR}|g" /etc/netplan/99-local-${DEV}.yaml;
 
   unset DEV ADDR PREFIX NETMASK;
