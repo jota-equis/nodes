@@ -6,9 +6,11 @@ network:
       dhcp6: no
       mtu: 1450
       addresses:
-        - IFADDR
+        - IFADDR/32
       routes:
         - to: IFROUTE/32
+          from: IFADDR
           scope: link
         - to: IFNETWORK
           via: IFROUTE
+          from: IFADDR
