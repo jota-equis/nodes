@@ -90,5 +90,3 @@ spec:
                 secretKeyRef:
                   name: hcloud
                   key: location
-            - name: USE_NETWORKS
-              value: "yes"
