@@ -1,7 +1,7 @@
 network:
   version: 2
   ethernets:
-    k8s0:
+    DEVNAME:
       dhcp4: no
       dhcp6: no
       mtu: 1450
@@ -13,5 +13,5 @@ network:
         - to: IFNETWORK
           via: IFROUTE
       match:
-        name: en*s0
+        name: DEVNAME
       set-name: k8s0
