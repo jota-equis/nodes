@@ -65,8 +65,11 @@ chmod 0750 /srv/local/bin/*;
 
 for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
     [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
-    ip link property add dev ${i} altname k8s${NETDEVNUM};
-    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.${i}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
+    ip link set ${i} down;
+    ip link set dev  ${i} name k8s${NETDEVNUM};
+    ip link set k8s${NETDEVNUM} up;
+    ip link property add dev k8s${NETDEVNUM} altname ${i};
+    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.k8s${NETDEVNUM}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
 done
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
