@@ -5,17 +5,26 @@
 for i in $(cat /srv/local/etc/.env/IFACE_LOCAL); do
   . /srv/local/etc/.env/${i}.iface;
 
-  [[ -z $DEV || -z $NETVIA || -z $NETWORK || -z $NETMASK || -z $ADDR ]] && exit 1;
+  [[ -z $DEV || -z $DEVADDR || -z $DEVMASK || -z $NETWORK || -z $NETMASK || -z $NETGW ]] && exit 1;
 
   cp /srv/local/etc/netplan-local.yaml /etc/netplan/99-local-${DEV}.yaml;
 
-  sed -i "s|IFNAME|${DEV}|g" /etc/netplan/99-local-${DEV}.yaml;
-  sed -i "s|IFROUTE|${NETVIA}|g" /etc/netplan/99-local-${DEV}.yaml;
+  sed -i "s|DEVNAME|${DEV}|g" /etc/netplan/99-local-${DEV}.yaml;
+  sed -i "s|IFROUTE|${NETGW}|g" /etc/netplan/99-local-${DEV}.yaml;
   sed -i "s|IFNETWORK|${NETWORK}/${NETMASK}|g" /etc/netplan/99-local-${DEV}.yaml;
-  sed -i "s|IFADDR|${ADDR}|g" /etc/netplan/99-local-${DEV}.yaml;
+  sed -i "s|IFADDR|${DEVADDR}|g" /etc/netplan/99-local-${DEV}.yaml;
 
-  unset DEV ADDR PREFIX NETMASK;
+  NEWDEV=$(awk '/set-name/{ print $2 }' /etc/netplan/99-local-${DEV}.yaml);
+  
+  if [[ ! -z $NEWDEV && ! $NEWDEV = $DEV ]]; then
+    echo "${NEWDEV}" >> /srv/local/etc/.env/IFACE_LOCAL_NEW;
+    mv /etc/netplan/99-local-${DEV}.yaml /etc/netplan/99-local-${NEWDEV}.yaml;
+  fi
+
+  unset DEV DEVADDR DEVMASK NETWORK NETMASK NETGW;
 done
+
+[[ -f /srv/local/etc/.env/IFACE_LOCAL_NEW ]] && mv /srv/local/etc/.env/IFACE_LOCAL_NEW /srv/local/etc/.env/IFACE_LOCAL;
 
 netplan generate;
 
