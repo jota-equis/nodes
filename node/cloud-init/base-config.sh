@@ -54,14 +54,20 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 echo "" > /etc/environment;
 
-for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR PODS_CIDR SVC_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}"; done
+for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR PODS_CIDR SVC_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do
+    [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}";
+done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
 [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]] && /srv/local/bin/local-ifaces.sh;
 
-for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.${i}.forwarding = 1" >> /etc/sysctl.d/999-local.conf; done
+for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
+    [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
+    ip link property add dev ${i} altname k8s${NETDEVNUM};
+    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.${i}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
+done
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
