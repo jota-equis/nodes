@@ -1,7 +1,7 @@
 network:
   version: 2
   ethernets:
-    IFNAME:
+    k8s0:
       dhcp4: no
       dhcp6: no
       mtu: 1450
@@ -9,8 +9,9 @@ network:
         - IFADDR/32
       routes:
         - to: IFROUTE/32
-          from: IFADDR
           scope: link
         - to: IFNETWORK
-          from: IFADDR
           via: IFROUTE
+      match:
+        name: en*s0
+      set-name: k8s0
