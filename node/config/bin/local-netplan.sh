@@ -19,6 +19,7 @@ for i in $(cat /srv/local/etc/.env/IFACE_LOCAL); do
   if [[ ! -z $NEWDEV && ! $NEWDEV = $DEV ]]; then
     echo "${NEWDEV}" >> /srv/local/etc/.env/IFACE_LOCAL_NEW;
     mv /etc/netplan/99-local-${DEV}.yaml /etc/netplan/99-local-${NEWDEV}.yaml;
+    rm /srv/local/etc/.env/${i}.iface;
   fi
 
   unset DEV DEVADDR DEVMASK NETWORK NETMASK NETGW;
