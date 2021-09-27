@@ -164,6 +164,7 @@ echo rbd >> /etc/modules;
 
 echo "$(echo 2 | select-editor | grep nano | awk '{ print ($0+0) }')" | select-editor;
 
+(crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
 echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim;
 chmod 0751 /etc/cron.d/fstrim;
 # · ---
