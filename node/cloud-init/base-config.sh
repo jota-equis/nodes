@@ -54,6 +54,10 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 echo "" > /etc/environment;
 
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
+echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
+sysctl --system;
+
 for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR PODS_CIDR SVC_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do
     [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}";
 done
@@ -61,16 +65,21 @@ done
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
-[[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]] && /srv/local/bin/local-ifaces.sh;
+if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
+    cp /srv/local/bin/local* /usr/local/bin/;
+    /usr/local/bin/local-netplan.sh;
+    rm /usr/local/bin/local*.sh;
+    (crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
+fi
 
-for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
-    [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
-    ip link set ${i} down;
-    ip link set dev  ${i} name k8s${NETDEVNUM};
-    ip link set k8s${NETDEVNUM} up;
-    ip link property add dev k8s${NETDEVNUM} altname ${i};
-    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.k8s${NETDEVNUM}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
-done
+#for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
+#    [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
+#    ip link set ${i} down;
+#    ip link set dev  ${i} name k8s${NETDEVNUM};
+#    ip link set k8s${NETDEVNUM} up;
+#    ip link property add dev k8s${NETDEVNUM} altname ${i};
+#    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.k8s${NETDEVNUM}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
+#done
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
@@ -161,10 +170,8 @@ for d in $(lsblk -dnoNAME | grep sd); do
 done
 
 echo rbd >> /etc/modules;
+echo "SELECTED_EDITOR=\"/bin/nano\"" > /root/.selected_editor;
 
-echo "$(echo 2 | select-editor | grep nano | awk '{ print ($0+0) }')" | select-editor;
-
-(crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
 echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim;
 chmod 0751 /etc/cron.d/fstrim;
 # · ---
