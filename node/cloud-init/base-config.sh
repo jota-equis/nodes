@@ -54,16 +54,16 @@ curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-loc
 
 echo "" > /etc/environment;
 
-echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
-echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
-sysctl --system;
-
 for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN NETWORKID LABELS LOCAL_CIDR PODS_CIDR SVC_CIDR RKE_IP HTTP_PORT HTTPS_PORT; do
     [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}";
 done
 
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
+
+# echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
+echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
+sysctl --system;
 
 if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
     cp /srv/local/bin/local* /usr/local/bin/;
@@ -112,6 +112,13 @@ else
     fi
 
     if [[ "x${ROLE}" != "xmaster" ]]; then
+        tuned-adm profile network-latency;
+        mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2;
+        touch /srv/data/rke2/config.yaml && chmod 0640 /srv/data/rke2config.yaml;
+        ln -sf /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml;
+
+        curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="agent" sh -
+
         ufw allow ${HTTP_PORT}/tcp comment "Worker http";
         ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
         echo iscsi_tcp >> /etc/modules;
