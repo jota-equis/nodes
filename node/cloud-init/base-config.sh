@@ -34,6 +34,9 @@ curl -o /etc/systemd/timesyncd.conf ${REPO}/node/config/etc/systemd/timesyncd.co
 curl -o /srv/local/bin/local-ifaces.sh ${REPO}/node/config/bin/local-ifaces.sh;
 curl -o /srv/local/bin/local-netplan.sh ${REPO}/node/config/bin/local-netplan.sh;
 curl -o /srv/local/etc/netplan-local.yaml ${REPO}/node/config/etc/netplan/99-local.yaml;
+curl -o /srv/local/etc/.my_kuberc ${REPO}/node/config/etc/.my_kuberc;
+
+chmod 0644 /srv/local/etc/.my_kuberc;
 
 [[ -f /etc/environment ]] && . /etc/environment;
 
@@ -122,6 +125,22 @@ else
         ufw allow ${HTTP_PORT}/tcp comment "Worker http";
         ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
         echo iscsi_tcp >> /etc/modules;
+    else
+        cd /tmp;
+        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3;
+        chmod 0700 get_helm.sh;
+        ./get_helm.sh && sleep 1 && rm -f get_helm.sh;
+
+        mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2 \
+          /var/lib/rancher/rke2/server/manifests;
+
+        touch /srv/data/rke2/config.yaml /srv/data/rke2/rke2-cilium-config.yaml \
+          /srv/data/rke2/rke2-coredns-config.yaml;
+
+        chmod 0640 /srv/data/rke2/*.yaml;
+        ln -sf /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml;
+
+        curl -sfL https://get.rke2.io | sh -
     fi
 fi
 
