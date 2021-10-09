@@ -104,7 +104,9 @@ else
     fi
 
     if [[ "x${ROLE}" != "xmaster" ]]; then
-        sed -i 's/^#vm.nr_hugepages/vm.nr_hugepages/g' /etc/sysctl.d/999-local.conf;
+        mkdir -pm0755 /mnt/huge;
+        # sed -i 's/^#vm.nr_hugepages/vm.nr_hugepages/g' /etc/sysctl.d/999-local.conf;
+        echo -e "\n# hugetlbfs\t/mnt/huge\thugetlbfs\tdefaults,pagesize=1G\t\t0\t0\n" >> /etc/fstab;
         echo iscsi_tcp >> /etc/modules;
         tuned-adm profile network-latency;
 
