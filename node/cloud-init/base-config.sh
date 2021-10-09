@@ -64,17 +64,6 @@ done
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
-# echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
-echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
-sysctl --system;
-
-if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
-    cp /srv/local/bin/local* /usr/local/bin/;
-    /usr/local/bin/local-netplan.sh;
-    rm /usr/local/bin/local*.sh;
-    (crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
-fi
-
 #for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
 #    [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
 #    ip link set ${i} down;
@@ -115,16 +104,18 @@ else
     fi
 
     if [[ "x${ROLE}" != "xmaster" ]]; then
+        sed -i 's/^#vm.nr_hugepages/vm.nr_hugepages/g' /etc/sysctl.d/999-local.conf;
+        echo iscsi_tcp >> /etc/modules;
         tuned-adm profile network-latency;
+
+        ufw allow ${HTTP_PORT}/tcp comment "Worker http";
+        ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
+
         mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2;
         touch /srv/data/rke2/config.yaml && chmod 0640 /srv/data/rke2config.yaml;
         ln -sf /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml;
 
         curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="agent" sh -
-
-        ufw allow ${HTTP_PORT}/tcp comment "Worker http";
-        ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
-        echo iscsi_tcp >> /etc/modules;
     else
         cd /tmp;
         curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3;
@@ -167,6 +158,8 @@ sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
 sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
 
+echo -e "\nnone\t\t/sys/fs/bpf\tbpf\trw,relatime\t\t0\t0\n" >> /etc/fstab;
+
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
 
 rm -Rf /tmp/* /tmp/.* /etc/resolv.conf;
@@ -184,8 +177,20 @@ nameserver 8.8.8.8
 nameserver 2606:4700:4700::1111
 EOF
 
-systemctl disable systemd-resolved && systemctl stop systemd-resolved;
-systemctl enable tmp.mount && systemctl start tmp.mount;
+# echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
+echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
+
+sysctl --system;
+
+if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
+    cp /srv/local/bin/local* /usr/local/bin/;
+    /usr/local/bin/local-netplan.sh;
+    rm /usr/local/bin/local*.sh;
+    (crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
+fi
+
+systemctl disable systemd-resolved --now;
+systemctl enable tmp.mount --now;
 systemctl restart systemd-timesyncd.service;
 systemctl enable fail2ban;
 
