@@ -22,7 +22,7 @@ usermod -L root;
 echo "root:$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)" | chpasswd;
 usermod -U root;
 
-mkdir -pm0751 /srv/{backup,data,local} /var/lib/{docker,longhorn,rancher} /mnt/tmp;
+mkdir -pm0751 /srv/{backup,data,local} /var/lib/{docker,longhorn,rancher} /mnt/{storage,tmp};
 mkdir -pm0751 /srv/local/{bin,etc/.env}; chmod 0710 /srv/local/etc/.env; 
 
 curl -o /etc/apt/apt.conf.d/999-local ${REPO}/node/config/etc/apt/apt.conf.d/999-local;
@@ -64,15 +64,6 @@ done
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
-#for i in $(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort ); do
-#    [[ -z $NETDEVNUM ]] && NETDEVNUM=0 || ((NETDEVNUM=NETDEVNUM+1));
-#    ip link set ${i} down;
-#    ip link set dev  ${i} name k8s${NETDEVNUM};
-#    ip link set k8s${NETDEVNUM} up;
-#    ip link property add dev k8s${NETDEVNUM} altname ${i};
-#    # echo -e "\n# Internal IPv4 forwarding\nnet.ipv4.conf.k8s${NETDEVNUM}.forwarding = 1" >> /etc/sysctl.d/999-local.conf;
-#done
-
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
@@ -105,8 +96,6 @@ else
 
     if [[ "x${ROLE}" != "xmaster" ]]; then
         mkdir -pm0755 /mnt/huge;
-        # sed -i 's/^#vm.nr_hugepages/vm.nr_hugepages/g' /etc/sysctl.d/999-local.conf;
-        echo -e "\n# hugetlbfs\t/mnt/huge\thugetlbfs\tdefaults,pagesize=1G\t\t0\t0\n" >> /etc/fstab;
         echo iscsi_tcp >> /etc/modules;
         tuned-adm profile network-latency;
 
@@ -124,8 +113,7 @@ else
         chmod 0700 get_helm.sh;
         ./get_helm.sh && sleep 1 && rm -f get_helm.sh;
 
-        mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2 \
-          /var/lib/rancher/rke2/server/manifests;
+        mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2 /var/lib/rancher/rke2/server/manifests;
 
         touch /srv/data/rke2/config.yaml /srv/data/rke2/rke2-cilium-config.yaml \
           /srv/data/rke2/rke2-coredns-config.yaml;
@@ -183,13 +171,6 @@ EOF
 echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
 
 sysctl --system;
-
-if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
-    cp /srv/local/bin/local* /usr/local/bin/;
-    /usr/local/bin/local-netplan.sh;
-    rm /usr/local/bin/local*.sh;
-    (crontab -l; echo "@reboot /usr/sbin/netplan apply") | crontab -;
-fi
 
 systemctl disable systemd-resolved --now;
 systemctl enable tmp.mount --now;
