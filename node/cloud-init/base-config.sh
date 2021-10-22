@@ -103,12 +103,12 @@ else
         ufw allow ${HTTPS_PORT}/tcp comment "Worker https";
 
         mkdir -pm0750 /srv/data/rke2 /etc/rancher/rke2;
-        touch /srv/data/rke2/config.yaml && chmod 0640 /srv/data/rke2config.yaml;
+        touch /srv/data/rke2/config.yaml && chmod 0640 /srv/data/rke2/config.yaml;
         ln -sf /var/lib/rancher/rke2/agent/etc/crictl.yaml /etc/crictl.yaml;
 
         curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="agent" sh -
     else
-        cd /tmp;
+        cd ~;
         curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3;
         chmod 0700 get_helm.sh;
         ./get_helm.sh && sleep 1 && rm -f get_helm.sh;
