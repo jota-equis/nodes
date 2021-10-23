@@ -3,6 +3,7 @@ exec 1> >(logger -s -t $(basename $0)) 2>&1
 # · ---
 export DEBIAN_FRONTEND=noninteractive
 # · ---
+ADDPKG=
 SYS_LANG="${1:-es_ES}"
 SSH_PORT=22
 MASTER=
@@ -63,8 +64,25 @@ for I in EXTRAPORTS DOMAIN MASTER REPO ROLE SSH_PORT SYS_LANG TOKEN TOKENCSI NET
     [[ -z "${!I}" ]] && touch "/srv/local/etc/.env/${I}" || echo "${!I}" > "/srv/local/etc/.env/${I}";
 done
 
-chmod 0600 /srv/local/etc/.env/*;
-chmod 0750 /srv/local/bin/*;
+chmod 0600 /srv/local/etc/.env/* && chmod 0750 /srv/local/bin/*;
+
+localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
+
+echo rbd >> /etc/modules;
+echo -e "\nnone\t\t/sys/fs/bpf\tbpf\trw,relatime\t\t0\t0\n" >> /etc/fstab;
+# echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
+echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
+sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
+echo "SELECTED_EDITOR=\"/bin/nano\"" > /etc/skel/.selected_editor && cd /etc/skel/.selected_editor /root/.selected_editor;
+echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim && chmod 0751 /etc/cron.d/fstrim;
+sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
+
+sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
+echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
+
+sysctl --system;
+rm -Rf /tmp/* /tmp/.*;
+systemctl enable tmp.mount --now;
 
 if [[ "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
     apt install -y ifupdown net-tools;
@@ -200,16 +218,7 @@ else
     done
 fi
 
-echo -e "\n[[ -f /etc/bash_completion ]] && ! shopt -oq posix && . /etc/bash_completion\n" >> /root/.bashrc;
-sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
-sed -i 's/^#force_color_prompt/force_color_prompt/g' /root/.bashrc;
-sed 's/^Options=/Options=noexec,/g' /usr/share/systemd/tmp.mount > /etc/systemd/system/tmp.mount;
-
-echo -e "\nnone\t\t/sys/fs/bpf\tbpf\trw,relatime\t\t0\t0\n" >> /etc/fstab;
-
-localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
-
-rm -Rf /tmp/* /tmp/.* /etc/resolv.conf;
+rm -f /etc/resolv.conf;
 
 cat << 'EOF' > /etc/systemd/resolved.conf
 [Resolve]
@@ -224,13 +233,7 @@ nameserver 8.8.8.8
 nameserver 2606:4700:4700::1111
 EOF
 
-# echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
-echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
-
-sysctl --system;
-
 systemctl disable systemd-resolved --now;
-systemctl enable tmp.mount --now;
 systemctl restart systemd-timesyncd.service;
 systemctl enable fail2ban;
 
@@ -240,11 +243,6 @@ for d in $(lsblk -dnoNAME | grep sd); do
   echo "block/${d}/queue/iosched/write_expire = 1500" >> /etc/sysfs.d/${d}.conf;
 done
 
-echo rbd >> /etc/modules;
-echo "SELECTED_EDITOR=\"/bin/nano\"" > /root/.selected_editor;
-
-echo "17 3 */2 * *      root    /usr/sbin/fstrim --all" > /etc/cron.d/fstrim;
-chmod 0751 /etc/cron.d/fstrim;
 # · ---
 DEBIAN_FRONTEND=noninteractive apt -y full-upgrade && apt -y autoclean && apt -y autoremove && sync;
 fstrim --all;
