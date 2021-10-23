@@ -66,6 +66,60 @@ done
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
+if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
+    apt -y install ifupdown net-tools;
+    
+    sed -i -e 's/^GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"/' /etc/default/grub;
+    update-grub;
+    
+    mkdir -pm0755 /etc/network/interfaces.d;
+
+    cat << EOF > /etc/network/interfaces
+    source /etc/network/interfaces.d/*
+
+    auto lo
+    iface lo inet loopback
+    
+    auto eth0
+    auto eth1
+    
+    dns-nameservers 1.1.1.1 8.8.8.8
+    EOF
+
+    ETH0_IP=$(ip -4 -f inet a show eth0 | awk '/inet/{ print $2 }' | awk -F "/" '{ print $1 }');
+    cat << EOF > /etc/network/interfaces.d/60-public-network.cfg
+iface eth0 inet static
+    address $ETH0_IP
+    netmask 255.255.255.255
+    gateway 172.31.1.1
+    pointopoint 172.31.1.1
+    dns-nameservers 1.1.1.1 8.8.8.8
+
+#iface eth0 inet6 static
+#    address <2001:db8:0:3df1::1>
+#    netmask 64
+#    gateway fe80::1
+EOF
+
+    ETH1_DEV=$(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort);
+    ETH1_IP=$(ip -4 -f inet a show $ETH1_DEV | awk '/inet/{ print $2 }' | awk -F "/" '{ print $1 }');
+    ETH1_GW=$(ip -4 r list dev $ETH1_DEV scope link);
+
+    [[ ! -z $LOCAL_CIDR ]] && ETH1_NT="$LOCAL_CIDR" || ETH1_NT=$(ip -4 r list dev $ETH1_DEV via $ETH1_GW);
+
+    cat << EOF > /etc/network/interfaces.d/61-my-private-network.cfg
+iface eth1 inet static
+    address $ETH1_IP
+    netmask 255.255.255.255
+    mtu 1450
+    pointopoint $ETH1_GW
+    post-up ip route add $ETH1_NT via $ETH1_GW dev eth1
+EOF
+
+    echo -e "network:\n  config: disabled\n" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg;
+    rm /etc/network/interfaces.d/50-cloud-init.cfg;
+fi
+
 if [[ "x${SSH_PORT}" != "x22" ]]; then
     sed -i "s/^Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config;
     sed -i "s/Port 22/Port ${SSH_PORT}/" /etc/ssh/ssh_config;
