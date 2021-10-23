@@ -66,8 +66,8 @@ done
 chmod 0600 /srv/local/etc/.env/*;
 chmod 0750 /srv/local/bin/*;
 
-if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
-    apt -y install ifupdown net-tools;
+if [[ "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
+    apt install -y ifupdown net-tools;
     
     sed -i -e 's/^GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"/' /etc/default/grub;
     update-grub;
@@ -118,7 +118,7 @@ iface eth1 inet static
 EOF
 
     echo -e "network:\n  config: disabled\n" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg;
-    rm /etc/network/interfaces.d/50-cloud-init.cfg;
+    rm -f /etc/network/interfaces.d/50-cloud-init.cfg /etc/netplan/50-cloud-init.yaml;
 fi
 
 if [[ "x${SSH_PORT}" != "x22" ]]; then
