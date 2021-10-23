@@ -123,8 +123,7 @@ EOF
     ETH1_DEV=$(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort);
     ETH1_IP=$(ip -4 -f inet a show $ETH1_DEV | awk '/inet/{ print $2 }' | awk -F "/" '{ print $1 }');
     ETH1_GW=$(ip -4 r list dev $ETH1_DEV scope link);
-
-    [[ ! -z $LOCAL_CIDR ]] && ETH1_NT="$LOCAL_CIDR" || ETH1_NT=$(ip -4 r list dev $ETH1_DEV via $ETH1_GW);
+    ETH1_NT=$(ip -4 r list dev $ETH1_DEV via $ETH1_GW);
 
     cat << EOF > /etc/network/interfaces.d/61-my-private-network.cfg
 iface eth1 inet static
