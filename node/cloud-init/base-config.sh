@@ -101,7 +101,6 @@ iface lo inet loopback
 auto eth0
 auto eth1
 
-dns-nameservers 1.1.1.1 8.8.8.8
 EOF
 
     ETH0_IP=$(ip -4 -f inet a show eth0 | awk '/inet/{ print $2 }' | awk -F "/" '{ print $1 }');
@@ -118,6 +117,7 @@ iface eth0 inet static
 #    address <2001:db8:0:3df1::1>
 #    netmask 64
 #    gateway fe80::1
+
 EOF
 
     ETH1_DEV=$(find /sys/class/net -type l -not -name eth0 -not -lname '*virtual*' -printf '%f ' | tr " " "\n" | sort);
@@ -133,6 +133,7 @@ iface eth1 inet static
     mtu 1450
     pointopoint $ETH1_GW
     post-up ip route add $ETH1_NT via $ETH1_GW dev eth1
+
 EOF
 
     echo -e "network:\n  config: disabled\n" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg;
