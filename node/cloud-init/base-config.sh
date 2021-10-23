@@ -75,18 +75,19 @@ if [[ ! -z "${THIS_FIXED_IPLAN}" && "x${THIS_FIXED_IPLAN}" = "x1" ]]; then
     mkdir -pm0755 /etc/network/interfaces.d;
 
     cat << EOF > /etc/network/interfaces
-    source /etc/network/interfaces.d/*
+source /etc/network/interfaces.d/*
 
-    auto lo
-    iface lo inet loopback
-    
-    auto eth0
-    auto eth1
-    
-    dns-nameservers 1.1.1.1 8.8.8.8
-    EOF
+auto lo
+iface lo inet loopback
+
+auto eth0
+auto eth1
+
+dns-nameservers 1.1.1.1 8.8.8.8
+EOF
 
     ETH0_IP=$(ip -4 -f inet a show eth0 | awk '/inet/{ print $2 }' | awk -F "/" '{ print $1 }');
+
     cat << EOF > /etc/network/interfaces.d/60-public-network.cfg
 iface eth0 inet static
     address $ETH0_IP
