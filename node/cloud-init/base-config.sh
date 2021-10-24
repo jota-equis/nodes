@@ -69,7 +69,8 @@ chmod 0600 /srv/local/etc/.env/* && chmod 0750 /srv/local/bin/*;
 localectl set-locale LANG=${SYS_LANG}.UTF-8 LANGUAGE=${SYS_LANG} LC_MESSAGES=POSIX LC_COLLATE=C;
 
 echo rbd >> /etc/modules;
-echo -e "\nnone\t\t/sys/fs/bpf\tbpf\trw,relatime\t\t0\t0\n" >> /etc/fstab;
+echo -e "\nbpffs\t\t/sys/fs/bpf\tbpf\tdefaults\t\t0 0\n" >> /etc/fstab;
+
 # echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.d/999-local.conf;
 echo "net.ipv4.conf.lxc*.rp_filter = 0" >> /etc/sysctl.d/999-local.conf;
 sed -i 's/^#force_color_prompt/force_color_prompt/g' /etc/skel/.bashrc;
