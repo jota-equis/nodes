@@ -200,6 +200,7 @@ for d in $(lsblk -dnoNAME | grep sd); do
   echo -e "\nblock/${d}/queue/iosched/front_merges = 0" > /etc/sysfs.d/${d}.conf;
   echo "block/${d}/queue/iosched/read_expire = 150" >> /etc/sysfs.d/${d}.conf;
   echo "block/${d}/queue/iosched/write_expire = 1500" >> /etc/sysfs.d/${d}.conf;
+  echo "block/${d}/queue/rotational = 0" >> /etc/sysfs.d/${d}.conf;
 done
 
 echo rbd >> /etc/modules;
